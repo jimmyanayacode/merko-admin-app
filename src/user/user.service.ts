@@ -13,7 +13,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 
 import { User } from './entities/user.entity';
-import { PaginationDto } from 'src/common/pagination-common.dto';
+import { PaginationDto } from 'src/common/dto/pagination-common.dto';
 import { AuthService } from 'src/auth/auth/auth.service';
 
 @Injectable()
@@ -24,7 +24,7 @@ export class UserService {
     private authService: AuthService,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
+  async create(createUserDto: CreateUserDto): Promise<any> {
     const { name, email, password } = createUserDto;
     const userFoundByEmail: User = await this.userRepository.findOne({
       where: { email },
@@ -43,7 +43,9 @@ export class UserService {
       password: passwordEncrypt,
     });
 
-    return await this.userRepository.save(user);
+    const userCreated = await this.userRepository.save(user);
+
+    return this.authService.generateJwt(userCreated);
   }
 
   async login(loginUserDto: LoginUserDto) {
@@ -52,18 +54,15 @@ export class UserService {
       loginUserDto.password,
     );
 
-    if (!user) throw new UnauthorizedException('Credenciales inválidas');
-    return this.authService.login(user);
+    if (!user) throw new UnauthorizedException('Datos ingresados incorrectos');
+    return this.authService.generateJwt(user);
   }
 
-  async validateUserPassword(
-    email: string,
-    password: string,
-  ): Promise<Boolean> {
+  async validateUserPassword(email: string, password: string): Promise<User> {
     const user = await this.findByEmail(email);
 
     if (user && (await bcrypt.compare(password, user.password))) {
-      return true;
+      return user;
     }
     return null;
   }
@@ -108,5 +107,16 @@ export class UserService {
       id,
       status: false,
     });
+  }
+
+  async valideteToken(tokenCheck: string) {
+    const payloadId = await this.authService.verifyToken(tokenCheck);
+    const user = await this.findOne(payloadId);
+    const token = await this.authService.generateJwt(user);
+
+    return {
+      user,
+      token,
+    };
   }
 }

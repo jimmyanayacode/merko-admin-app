@@ -8,12 +8,13 @@ import {
   Delete,
   Query,
   ParseUUIDPipe,
+  Req,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
-import { PaginationDto } from 'src/common/pagination-common.dto';
+import { PaginationDto } from 'src/common/dto/pagination-common.dto';
 
 @Controller('user')
 export class UserController {
@@ -32,6 +33,12 @@ export class UserController {
   @Get()
   findAll(@Query() paginationdto: PaginationDto) {
     return this.userService.findAll(paginationdto);
+  }
+
+  @Get('verify')
+  valideteToken(@Req() request: Request) {
+    const token = request.headers['x-token'];
+    return this.userService.valideteToken(token);
   }
 
   @Get(':id')
